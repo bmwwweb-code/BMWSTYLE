@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMWWeb AR - Portal & Simulador de Llantas Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter, VT323 & Noto Sans Myanmar for Myanmar text styling -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=VT323&family=Noto+Sans+Myanmar:wght@400;700;800&display=swap" rel="stylesheet">
+    <!-- html2canvas for accurate screenshot capturing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandBg: '#000000',
+                        brandOrange: '#f67e18',
+                        brandActiveRed: '#b61a10',
+                        brandGreen: '#22c55e',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        pixel: ['"VT323"', 'monospace'],
+                        myanmar: ['"Myanmar Text"', '"Noto Sans Myanmar"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #000000;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .bmw-radio-container {
+            background: linear-gradient(180deg, #18181b 0%, #09090b 100%);
+            border: 2px solid #27272a;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.05), 0 10px 25px rgba(0,0,0,0.9);
+            border-radius: 16px;
+            padding: 12px;
+            position: relative;
+        }
+
+        .bmw-radio-btn {
+            background: #121215;
+            color: #f67e18;
+            font-weight: 700;
+            border: 1px solid #27272a;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.8);
+            transition: all 0.2s ease;
+        }
+        .bmw-radio-btn:hover {
+            color: #ffffff;
+            border-color: #f67e18;
+        }
+        .bmw-radio-btn.active {
+            background: #1d0907;
+            color: #b61a10;
+            border-color: #b61a10;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(182,26,16,0.6);
+        }
+
+        .bmw-lcd-display {
+            background: #ff7700;
+            border: 3px solid #3f1a00;
+            border-radius: 6px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6), 0 0 12px rgba(255,119,0,0.4);
+            font-family: 'Myanmar Text', 'Noto Sans Myanmar', 'VT323', sans-serif;
+            color: #8b0000;
+            text-shadow: 0 0 2px rgba(139,0,0,0.8);
+        }
+
+        .wheel-container {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            z-index: 10;
+            transform-origin: center center;
+        }
+        .wheel-container:active {
+            cursor: grabbing;
+        }
+        
+        .wheel-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.85));
+            transition: filter 0.2s ease;
+        }
+
+        .wheel-svg, .custom-wheel-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .chassis-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between bg-black text-white selection:bg-brandOrange selection:text-black">
+
+    <header class="bg-black border-b border-zinc-900 px-4 py-3 shrink-0 shadow-2xl">
+        <div class="max-w-6xl mx-auto flex flex-col items-center">
+            
+            <div class="bmw-radio-container w-full max-w-3xl flex flex-col items-center space-y-3">
+                
+                <!-- Radio Top Button Strip -->
+                <div class="w-full flex items-center justify-between gap-1.5 px-2">
+                    <button onclick="playEngineSound6Cyl()" class="px-2.5 py-1 text-[10px] font-black rounded bg-emerald-950 text-emerald-400 border border-emerald-600 shadow-[0_0_8px_rgba(34,197,94,0.4)] flex items-center space-x-1 hover:bg-emerald-900 transition">
+                        <i class="fa-solid fa-power-off"></i><span>START</span>
+                    </button>
+
+                    <!-- Navigation Tabs mimicking BMW Head Unit -->
+                    <div class="flex-1 flex items-center justify-center space-x-1 sm:space-x-2">
+                        <button onclick="navigateToPage('extras')" id="tab-extras" class="bmw-radio-btn px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">EXTRAS</button>
+                        <button onclick="navigateToPage('diy')" id="tab-diy" class="bmw-radio-btn px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">DIY</button>
+                        <button onclick="navigateToPage('ocasion')" id="tab-ocasion" class="bmw-radio-btn px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">OCASIÓN</button>
+                        <button onclick="navigateToPage('llantas')" id="tab-llantas" class="bmw-radio-btn active px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">LLANTAS</button>
+                        <button onclick="navigateToPage('llaves')" id="tab-llaves" class="bmw-radio-btn px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">LLAVES</button>
+                        <button onclick="navigateToPage('doc')" id="tab-doc" class="bmw-radio-btn px-2 sm:px-3 py-1.5 rounded text-[10px] sm:text-xs tracking-wider">DOC</button>
+                    </div>
+
+                    <button onclick="resetConfiguration()" class="px-2.5 py-1 text-xs font-bold rounded bg-zinc-900 text-brandOrange border border-zinc-800 hover:text-white hover:border-brandOrange transition" title="Reiniciar Posiciones"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+
+                <!-- BMW LCD Screen with Expanded Bars & Myanmar Text Logo -->
+                <div class="w-full px-2">
+                    <div class="bmw-lcd-display py-1 px-2 flex items-center justify-between text-center select-none overflow-hidden">
+                        <span class="text-xl sm:text-2xl font-black font-pixel tracking-tighter shrink opacity-80 overflow-hidden whitespace-nowrap">≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡</span>
+                        <span id="lcd-main-title" class="text-xl sm:text-3xl font-extrabold uppercase px-2 text-[#8b0000] font-myanmar shrink-0 tracking-normal leading-tight">BMWEB LLANTAS 3D</span>
+                        <span class="text-xl sm:text-2xl font-black font-pixel tracking-tighter shrink opacity-80 overflow-hidden whitespace-nowrap">≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡</span>
+                    </div>
+                </div>
+
+                <!-- Status Line Bar -->
+                <div class="w-full flex items-center justify-between px-3 text-[10px] font-mono text-brandOrange/80">
+                    <span id="lcd-status-left">&lt; MODO: FITMENT PRO 3D &gt;</span>
+                    <span id="lcd-status-right">ENCAJE PERFECTO</span>
+                </div>
+            </div>
+
+            <!-- Top Action Bar for Camera, Upload Wheels/Chassis & Snapshot -->
+            <div id="action-bar-llantas" class="mt-2.5 flex items-center justify-end w-full max-w-3xl gap-2 flex-wrap sm:flex-nowrap">
+                <button onclick="takeSnapshot()" class="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-semibold rounded-lg flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-camera-retro text-brandOrange"></i>
+                    <span>Capturar Foto</span>
+                </button>
+                <button onclick="toggleCamera()" id="btn-cam" class="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-semibold rounded-lg flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-video text-brandOrange"></i>
+                    <span id="btn-cam-text">Activar Cámara AR</span>
+                </button>
+
+                <!-- Subir Llanta PNG Transparente -->
+                <label class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg cursor-pointer flex items-center space-x-1.5 transition shadow-lg">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <span>Subir Llanta PNG</span>
+                    <input type="file" accept="image/png, image/webp" onchange="loadCustomWheelImage(event)" class="hidden">
+                </label>
+
+                <!-- Subir Chasis Vehículo -->
+                <label class="px-3 py-1 bg-brandOrange hover:opacity-90 text-black text-xs font-bold rounded-lg cursor-pointer flex items-center space-x-1.5 transition shadow-lg">
+                    <i class="fa-solid fa-car"></i>
+                    <span>Subir Chasis</span>
+                    <input type="file" accept="image/*" onchange="loadCustomChassis(event)" class="hidden">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col relative overflow-hidden bg-black">
+        
+        <!-- PAGE 1: LLANTAS (Main AR Simulator) -->
+        <div id="page-llantas" class="flex-1 flex flex-col lg:flex-row relative overflow-hidden w-full h-full">
+            <!-- Center Workspace Container -->
+            <div class="flex-1 relative bg-zinc-950 flex items-center justify-center overflow-hidden min-h-[350px]" id="stage-container">
+                <!-- Camera Feed (AR Mode) -->
+                <video id="camera-stream" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden z-0"></video>
+
+                <!-- Workspace Canvas -->
+                <div id="workspace-canvas" class="relative w-full h-full max-w-4xl max-h-[550px] flex items-center justify-center p-4">
+                    <!-- Chassis Vehicle Image -->
+                    <img id="active-chassis-img" src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1600&q=80" alt="Chasis Seleccionado" class="chassis-img rounded-xl transition-all duration-300">
+
+                    <!-- Rear Wheel Overlay Layer with Precise Alignment -->
+                    <div id="wheel-rear" class="wheel-container">
+                        <div id="rear-wheel-wrapper" class="wheel-wrapper"></div>
+                    </div>
+
+                    <!-- Front Wheel Overlay Layer with Precise Alignment -->
+                    <div id="wheel-front" class="wheel-container">
+                        <div id="front-wheel-wrapper" class="wheel-wrapper"></div>
+                    </div>
+                </div>
+
+                <!-- Floating Badge for Selected Chassis -->
+                <div class="absolute top-4 left-4 bg-zinc-950/90 backdrop-blur px-3 py-1.5 rounded-lg border border-zinc-800 shadow-xl z-20 flex items-center space-x-2 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="chassis-info-badge" class="font-medium text-zinc-300">Chasis: BMW E46 Compact (17")</span>
+                </div>
+
+                <!-- Drag Hint -->
+                <div class="absolute bottom-3 left-4 text-[11px] text-zinc-500 font-mono pointer-events-none hidden sm:block">
+                    <i class="fa-solid fa-arrows-up-down-left-right text-brandOrange mr-1"></i> Arrastra las llantas para encaje milimétrico
+                </div>
+            </div>
+
+            <aside class="w-full lg:w-80 bg-zinc-950 border-t lg:border-t-0 lg:border-l border-zinc-900 flex flex-col shrink-0 h-[45vh] lg:h-auto z-10">
+                <div class="p-3 border-b border-zinc-900 bg-black flex items-center justify-between">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center space-x-2">
+                        <i class="fa-solid fa-folder-open text-brandOrange"></i>
+                        <span>Catálogo BMW AR</span>
+                    </h2>
+                    <div class="flex space-x-1">
+                        <button onclick="switchSidebarTab('wheels')" id="btn-side-wheels" class="px-2 py-1 text-[11px] font-bold rounded bg-brandActiveRed text-white transition">Llantas</button>
+                        <button onclick="switchSidebarTab('chassis')" id="btn-side-chassis" class="px-2 py-1 text-[11px] font-bold rounded bg-zinc-900 text-[#f67e18] hover:bg-zinc-800 transition">Chasis</button>
+                    </div>
+                </div>
+
+                <!-- Sidebar Content List -->
+                <div class="flex-1 overflow-y-auto p-3 space-y-4" id="sidebar-content-area">
+                    <!-- Wheels View -->
+                    <div id="catalog-wheels-view" class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] text-zinc-400 font-medium">Modelos OEM & Custom PNG:</span>
+                        </div>
+
+                        <div id="wheels-grid" class="grid grid-cols-2 gap-2">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Fine Fitment Adjustment Controls -->
+                        <div class="pt-3 border-t border-zinc-900 space-y-2">
+                            <span class="text-[11px] text-zinc-400 font-medium block">Ajuste de Pulgadas / Diámetro:</span>
+                            <div class="flex items-center space-x-3 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
+                                <i class="fa-solid fa-circle-dot text-brandOrange text-xs"></i>
+                                <input type="range" id="wheel-scale-slider" min="0.7" max="1.4" step="0.02" value="1.0" oninput="adjustWheelScale(this.value)" class="w-full accent-brandOrange bg-zinc-800">
+                                <span id="scale-value-label" class="text-xs font-mono font-bold text-zinc-300 w-12 text-right">100%</span>
+                            </div>
+                        </div>
+
+                        <!-- Finish / Color Tint Picker -->
+                        <div class="pt-2 border-t border-zinc-900 space-y-2">
+                            <span class="text-[11px] text-zinc-400 font-medium block">Acabado / Color de Llanta:</span>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button onclick="setWheelFilter('original')" class="py-1 px-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-zinc-200 hover:border-brandOrange text-center">Silver</button>
+                                <button onclick="setWheelFilter('black')" class="py-1 px-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-zinc-400 hover:border-zinc-500 text-center">Negro</button>
+                                <button onclick="setWheelFilter('gold')" class="py-1 px-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-amber-400 hover:border-amber-300 text-center">Oro</button>
+                                <button onclick="setWheelFilter('bronze')" class="py-1 px-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-yellow-600 hover:border-yellow-500 text-center">Bronce</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chassis View -->
+                    <div id="catalog-chassis-view" class="space-y-2 hidden">
+                        <div class="text-[11px] text-zinc-400">Selecciona chasis base lateral BMW:</div>
+                        <div id="chassis-grid" class="grid grid-cols-1 gap-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Summary Footer -->
+                <div class="p-3 bg-black border-t border-zinc-900 flex items-center justify-between">
+                    <div class="text-xs text-zinc-400 truncate" id="selected-summary">Modelo: <span class="text-brandOrange font-bold">BMW Style 18 (17")</span></div>
+                    <button onclick="saveConfiguration()" class="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-brandOrange border border-zinc-800 rounded text-xs font-bold transition flex items-center space-x-1 shrink-0">
+                        <i class="fa-solid fa-bookmark"></i><span>Guardar</span>
+                    </button>
+                </div>
+            </aside>
+        </div>
+
+        <!-- PAGE 2: EXTRAS (BMW M Performance Parts & Upgrades) -->
+        <div id="page-extras" class="flex-1 overflow-y-auto p-6 lg:p-10 max-w-6xl mx-auto w-full hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center space-x-3">
+                        <i class="fa-solid fa-gauge-high text-brandOrange"></i>
+                        <span>BMW M Performance & Extras</span>
+                    </h1>
+                    <p class="text-sm text-zinc-400 mt-1">Mejora el rendimiento aerodinámico y estético de tu chasis BMW con componentes homologados.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                        <div class="h-40 rounded-xl bg-zinc-950 flex items-center justify-center overflow-hidden border border-zinc-800">
+                            <i class="fa-solid fa-wind text-brandOrange text-4xl"></i>
+                        </div>
+                        <h3 class="font-bold text-lg text-white">Kit Aerodinámico Carbono</h3>
+                        <p class="text-xs text-zinc-400 leading-relaxed">Spacers delanteros de fibra de carbono real con canalización de aire directa para refrigeración de frenos.</p>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-brandOrange font-mono font-bold text-sm">1.250 €</span>
+                            <button onclick="showCustomModal('Kit Aerodinámico añadido a la lista de deseos.')" class="px-3 py-1.5 bg-brandOrange text-black font-bold text-xs rounded-lg hover:opacity-90 transition">Añadir</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                        <div class="h-40 rounded-xl bg-zinc-950 flex items-center justify-center overflow-hidden border border-zinc-800">
+                            <i class="fa-solid fa-bolt text-brandOrange text-4xl"></i>
+                        </div>
+                        <h3 class="font-bold text-lg text-white">Suspensión Roscada M</h3>
+                        <p class="text-xs text-zinc-400 leading-relaxed">Regulación en altura, compresión y rebote. Diseñada para un paso por curva milimétrico en circuito o calle.</p>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-brandOrange font-mono font-bold text-sm">1.890 €</span>
+                            <button onclick="showCustomModal('Suspensión Roscada añadida a la lista de deseos.')" class="px-3 py-1.5 bg-brandOrange text-black font-bold text-xs rounded-lg hover:opacity-90 transition">Añadir</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                        <div class="h-40 rounded-xl bg-zinc-950 flex items-center justify-center overflow-hidden border border-zinc-800">
+                            <i class="fa-solid fa-volume-high text-brandOrange text-4xl"></i>
+                        </div>
+                        <h3 class="font-bold text-lg text-white">Escape Deportivo Acero Inoxidable</h3>
+                        <p class="text-xs text-zinc-400 leading-relaxed">Sistema de válvulas electrónicas para un ronquido profundo de 6 cilindros en línea.</p>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-brandOrange font-mono font-bold text-sm">2.450 €</span>
+                            <button onclick="showCustomModal('Escape Deportivo añadido a la lista de deseos.')" class="px-3 py-1.5 bg-brandOrange text-black font-bold text-xs rounded-lg hover:opacity-90 transition">Añadir</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: DIY (Do It Yourself Guides & Maintenance) -->
+        <div id="page-diy" class="flex-1 overflow-y-auto p-6 lg:p-10 max-w-6xl mx-auto w-full hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center space-x-3">
+                        <i class="fa-solid fa-wrench text-brandOrange"></i>
+                        <span>DIY - Guías de Taller & Bricolaje</span>
+                    </h1>
+                    <p class="text-sm text-zinc-400 mt-1">Aprende a realizar mantenimiento preventivo y upgrades mecánicos en tu propio garaje.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-brandActiveRed/20 text-brandActiveRed flex items-center justify-center text-lg font-bold">1</div>
+                            <div>
+                                <h3 class="font-bold text-white text-base">Sustitución de Bujías y Bobinas en motores N54 / N55</h3>
+                                <span class="text-xs text-zinc-500 font-mono">Dificultad: Media • 45 min</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">Guía paso a paso para retirar la tapa de balancines superior, desconectar conectores de encendido y torque correcto de apriete a 25 Nm.</p>
+                        <button onclick="showCustomModal('Cargando guía técnica detallada en PDF...')" class="text-xs font-bold text-brandOrange hover:underline flex items-center space-x-1">
+                            <span>Leer tutorial completo</span> <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-brandActiveRed/20 text-brandActiveRed flex items-center justify-center text-lg font-bold">2</div>
+                            <div>
+                                <h3 class="font-bold text-white text-base">Purgado del Sistema de Refrigeración & Termostato</h3>
+                                <span class="text-xs text-zinc-500 font-mono">Dificultad: Alta • 90 min</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">Procedimiento exacto con purga eléctrica de bomba auxiliar de agua en chasis E46 y E90 para evitar sobrecalentamientos.</p>
+                        <button onclick="showCustomModal('Cargando diagrama de refrigeración...')" class="text-xs font-bold text-brandOrange hover:underline flex items-center space-x-1">
+                            <span>Leer tutorial completo</span> <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4: OCASIÓN (Vehículos de Ocasión Verificados) -->
+        <div id="page-ocasion" class="flex-1 overflow-y-auto p-6 lg:p-10 max-w-6xl mx-auto w-full hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center space-x-3">
+                        <i class="fa-solid fa-car-side text-brandOrange"></i>
+                        <span>Vehículos de Ocasión BMW Certified</span>
+                    </h1>
+                    <p class="text-sm text-zinc-400 mt-1">Unidades seleccionadas con historial de mantenimiento oficial BMW y garantía extendida.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
+                        <div>
+                            <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" alt="BMW E46" class="w-full h-48 object-cover">
+                            <div class="p-5 space-y-2">
+                                <h3 class="font-bold text-lg text-white">BMW 330Ci E46 Pack M</h3>
+                                <div class="flex items-center space-x-2 text-xs text-zinc-400 font-mono">
+                                    <span>Año 2004</span> • <span>145.000 km</span> • <span>Gasolina</span>
+                                </div>
+                                <p class="text-xs text-zinc-400 pt-2">Color Imolarot II, interior cuero dakota negro, llantas Style 68 originales restauradas.</p>
+                            </div>
+                        </div>
+                        <div class="p-5 pt-0 flex items-center justify-between">
+                            <span class="text-brandOrange font-mono font-bold text-base">14.900 €</span>
+                            <button onclick="showCustomModal('Solicitud de cita previa para ver el BMW 330Ci enviada.')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-lg transition">Reservar Cita</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
+                        <div>
+                            <img src="https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80" alt="BMW M3" class="w-full h-48 object-cover">
+                            <div class="p-5 space-y-2">
+                                <h3 class="font-bold text-lg text-white">BMW M3 E92 V8</h3>
+                                <div class="flex items-center space-x-2 text-xs text-zinc-400 font-mono">
+                                    <span>Año 2011</span> • <span>98.000 km</span> • <span>V8 420CV</span>
+                                </div>
+                                <p class="text-xs text-zinc-400 pt-2">Casquillos de biela cambiados preventivamente, techo de carbono, cambio DKG.</p>
+                            </div>
+                        </div>
+                        <div class="p-5 pt-0 flex items-center justify-between">
+                            <span class="text-brandOrange font-mono font-bold text-base">38.500 €</span>
+                            <button onclick="showCustomModal('Solicitud de cita previa para ver el BMW M3 enviado.')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-lg transition">Reservar Cita</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
+                        <div>
+                            <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80" alt="BMW M4" class="w-full h-48 object-cover">
+                            <div class="p-5 space-y-2">
+                                <h3 class="font-bold text-lg text-white">BMW M4 Competition F82</h3>
+                                <div class="flex items-center space-x-2 text-xs text-zinc-400 font-mono">
+                                    <span>Año 2018</span> • <span>62.000 km</span> • <span>Biturbo</span>
+                                </div>
+                                <p class="text-xs text-zinc-400 pt-2">Paquete Competition original, escape M Performance, frenos carbocerámicos.</p>
+                            </div>
+                        </div>
+                        <div class="p-5 pt-0 flex items-center justify-between">
+                            <span class="text-brandOrange font-mono font-bold text-base">54.900 €</span>
+                            <button onclick="showCustomModal('Solicitud de cita previa para ver el BMW M4 enviado.')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-lg transition">Reservar Cita</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 5: LLAVES (Duplicados, Codificación y EWS / CAS) -->
+        <div id="page-llaves" class="flex-1 overflow-y-auto p-6 lg:p-10 max-w-4xl mx-auto w-full hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center space-x-3">
+                        <i class="fa-solid fa-key text-brandOrange"></i>
+                        <span>Servicio de Llaves & Codificación EWS / CAS</span>
+                    </h1>
+                    <p class="text-sm text-zinc-400 mt-1">Duplicado de llaves inteligentes, tallado por láser y programación de inmovilizadores electrónicos.</p>
+                </div>
+
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-zinc-950 rounded-xl border border-zinc-800 space-y-2">
+                            <h3 class="font-bold text-white text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-microchip text-brandOrange"></i>
+                                <span>Programación CAS 1 / 2 / 3 / 4</span>
+                            </h3>
+                            <p class="text-xs text-zinc-400">Sincronización de módulos de acceso y arranque por OBD2 o banco directo.</p>
+                        </div>
+                        <div class="p-4 bg-zinc-950 rounded-xl border border-zinc-800 space-y-2">
+                            <h3 class="font-bold text-white text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-car text-brandOrange"></i>
+                                <span>Llaves Estilo F/G Series para E Series</span>
+                            </h3>
+                            <p class="text-xs text-zinc-400">Actualiza tu mando antiguo tipo diamante a la estética moderna de botones metálicos.</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-zinc-800 space-y-4">
+                        <h4 class="font-bold text-white text-xs uppercase tracking-wider">Solicitar Presupuesto de Llave</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input type="text" placeholder="Número de Bastidor (VIN de 7 últimos dígitos)" class="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-brandOrange">
+                            <select class="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-brandOrange">
+                                <option>Llave Diamante E46 / E39 (120€)</option>
+                                <option>Mando Smart Key F/G Style (180€)</option>
+                                <option>Tarjeta BMW Key Card (210€)</option>
+                            </select>
+                        </div>
+                        <button onclick="showCustomModal('Solicitud de llave registrada. Nos pondremos en contacto con usted.')" class="w-full py-2.5 bg-brandOrange text-black font-bold text-xs rounded-lg hover:opacity-95 transition">Enviar Solicitud</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 6: DOC (Documentación Técnica & Manuales de Taller) -->
+        <div id="page-doc" class="flex-1 overflow-y-auto p-6 lg:p-10 max-w-4xl mx-auto w-full hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center space-x-3">
+                        <i class="fa-solid fa-book text-brandOrange"></i>
+                        <span>Documentación Oficial & Manuales WDS</span>
+                    </h1>
+                    <p class="text-sm text-zinc-400 mt-1">Esquemas eléctricos oficiales (WDS), pares de apriete de culata y manuales de diagnosis ISTA.</p>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 flex items-center justify-between hover:border-zinc-700 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-file-pdf text-brandActiveRed text-2xl"></i>
+                            <div>
+                                <h3 class="font-bold text-white text-xs sm:text-sm">Manual WDS Esquemas Eléctricos BMW E46 (2002)</h3>
+                                <span class="text-[10px] text-zinc-500 font-mono">PDF • 45.2 MB • Multi-idioma</span>
+                            </div>
+                        </div>
+                        <button onclick="showCustomModal('Descargando archivo WDS E46...')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-brandOrange font-bold text-xs rounded-lg transition flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i><span>Descargar</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 flex items-center justify-between hover:border-zinc-700 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-file-pdf text-brandActiveRed text-2xl"></i>
+                            <div>
+                                <h3 class="font-bold text-white text-xs sm:text-sm">Pares de Apriete y Secuencia Culata Motores M54 / S54</h3>
+                                <span class="text-[10px] text-zinc-500 font-mono">PDF • 12.8 MB</span>
+                            </div>
+                        </div>
+                        <button onclick="showCustomModal('Descargando archivo de Pares de Apriete...')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-brandOrange font-bold text-xs rounded-lg transition flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i><span>Descargar</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 flex items-center justify-between hover:border-zinc-700 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-file-pdf text-brandActiveRed text-2xl"></i>
+                            <div>
+                                <h3 class="font-bold text-white text-xs sm:text-sm">Guía de Diagnosis ISTA+ y Configuración ENET / K+DCAN</h3>
+                                <span class="text-[10px] text-zinc-500 font-mono">PDF • 18.5 MB</span>
+                            </div>
+                        </div>
+                        <button onclick="showCustomModal('Descargando guía ISTA+...')" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-brandOrange font-bold text-xs rounded-lg transition flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i><span>Descargar</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // High Quality SVG Generator functions for crisp wheel graphics
+        function createWheelSVG(style, tint = 'original') {
+            let rimColor = '#e2e8f0';
+            let hubColor = '#94a3b8';
+            let shadowColor = '#1e293b';
+
+            if (tint === 'black') {
+                rimColor = '#334155';
+                hubColor = '#0f172a';
+            } else if (tint === 'gold') {
+                rimColor = '#f59e0b';
+                hubColor = '#d97706';
+            } else if (tint === 'bronze') {
+                rimColor = '#b45309';
+                hubColor = '#78350f';
+            }
+
+            let spokesContent = '';
+
+            switch (style) {
+                case 'style18': // Classic 5-Spoke BMW Style
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * 72;
+                        spokesContent += `<rect x="46" y="15" width="8" height="35" rx="3" fill="${rimColor}" transform="rotate(${angle} 50 50)"/>`;
+                    }
+                    break;
+                case 'bbs': // Mesh / Basketweave BBS LM
+                    for (let i = 0; i < 16; i++) {
+                        const angle = i * 22.5;
+                        spokesContent += `<line x1="50" y1="50" x2="50" y2="15" stroke="${rimColor}" stroke-width="2.5" transform="rotate(${angle} 50 50)"/>`;
+                        spokesContent += `<circle cx="50" cy="22" r="1.5" fill="${hubColor}" transform="rotate(${angle} 50 50)"/>`;
+                    }
+                    break;
+                case 'concave': // Vossen Style Twin Spoke
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * 72;
+                        spokesContent += `
+                            <rect x="44" y="12" width="4" height="38" rx="1.5" fill="${rimColor}" transform="rotate(${angle - 8} 50 50)"/>
+                            <rect x="52" y="12" width="4" height="38" rx="1.5" fill="${rimColor}" transform="rotate(${angle + 8} 50 50)"/>
+                        `;
+                    }
+                    break;
+                case 'style68': // BMW M Double Spoke Style 68
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * 72;
+                        spokesContent += `
+                            <rect x="43" y="14" width="5" height="36" rx="1" fill="${rimColor}" transform="rotate(${angle - 5} 50 50)"/>
+                            <rect x="52" y="14" width="5" height="36" rx="1" fill="${rimColor}" transform="rotate(${angle + 5} 50 50)"/>
+                            <circle cx="50" cy="18" r="1" fill="${hubColor}" transform="rotate(${angle} 50 50)"/>
+                        `;
+                    }
+                    break;
+                case 'style128': // Iconic Deep Concave 5 Spoke
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * 72;
+                        spokesContent += `<polygon points="44,50 56,50 58,12 42,12" fill="${rimColor}" transform="rotate(${angle} 50 50)"/>`;
+                        spokesContent += `<polygon points="47,45 53,45 54,16 46,16" fill="#09090b" transform="rotate(${angle} 50 50)"/>`;
+                    }
+                    break;
+                case 'mpower': // BMW M Star Spoke
+                default:
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * 72;
+                        spokesContent += `<polygon points="46,50 54,50 56,14 44,14" fill="${rimColor}" transform="rotate(${angle} 50 50)"/>`;
+                        spokesContent += `<line x1="50" y1="50" x2="50" y2="14" stroke="${hubColor}" stroke-width="1" transform="rotate(${angle} 50 50)"/>`;
+                    }
+                    break;
+            }
+
+            return `
+                <svg viewBox="0 0 100 100" class="wheel-svg" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Outer Rubber Tire -->
+                    <circle cx="50" cy="50" r="48" fill="#111113" stroke="#27272a" stroke-width="3"/>
+                    <circle cx="50" cy="50" r="43" fill="none" stroke="#1c1917" stroke-width="1.5"/>
+                    <!-- Rim Lip -->
+                    <circle cx="50" cy="50" r="38" fill="${shadowColor}" stroke="${rimColor}" stroke-width="2"/>
+                    <circle cx="50" cy="50" r="36" fill="#09090b"/>
+                    <!-- Spokes -->
+                    ${spokesContent}
+                    <!-- Center Cap (BMW Emblem) -->
+                    <circle cx="50" cy="50" r="10" fill="#ffffff" stroke="${rimColor}" stroke-width="1"/>
+                    <path d="M 50 40 A 10 10 0 0 1 60 50 L 50 50 Z" fill="#0284c7"/>
+                    <path d="M 40 50 A 10 10 0 0 1 50 40 L 50 50 Z" fill="#ffffff"/>
+                    <path d="M 50 50 L 40 50 A 10 10 0 0 1 50 60 Z" fill="#0284c7"/>
+                    <path d="M 50 50 L 50 60 A 10 10 0 0 1 60 50 Z" fill="#ffffff"/>
+                    <circle cx="50" cy="50" r="10" fill="none" stroke="#000000" stroke-width="0.5"/>
+                </svg>
+            `;
+        }
+
+        // Database of Wheels
+        let wheelsDB = [
+            { id: 1, name: 'BMW Style 18', type: 'style18', isCustomImg: false, desc: 'Clásico 5 Radios OEM' },
+            { id: 2, name: 'BBS LM Sport', type: 'bbs', isCustomImg: false, desc: 'Malla Multiradio Racing' },
+            { id: 3, name: 'BMW M Star Spoke', type: 'mpower', isCustomImg: false, desc: 'M Power Deportivo' },
+            { id: 4, name: 'BMW Style 68 M', type: 'style68', isCustomImg: false, desc: 'Doble Radio E46 M' },
+            { id: 5, name: 'BMW Style 128', type: 'style128', isCustomImg: false, desc: 'Concavo Profundo OEM' },
+            { id: 6, name: 'Vossen Concave', type: 'concave', isCustomImg: false, desc: 'Doble Radio Cóncavo' }
+        ];
+
+        // Database of Chassis
+        const chassisDB = [
+            { 
+                id: 'e46', 
+                name: 'BMW E46 Compact (Lateral)', 
+                baselineInch: 17, 
+                img: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1600&q=80', 
+                rearPos: { left: 28, top: 56 }, 
+                frontPos: { left: 68, top: 56 },
+                baseSize: 100,
+                perspective: 'rotateY(-4deg)'
+            },
+            { 
+                id: 'e36', 
+                name: 'BMW E36 Cabrio (Lateral)', 
+                baselineInch: 16, 
+                img: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1600&q=80', 
+                rearPos: { left: 24, top: 62 }, 
+                frontPos: { left: 73, top: 62 },
+                baseSize: 95,
+                perspective: 'rotateY(-2deg)'
+            },
+            { 
+                id: 'e92', 
+                name: 'BMW M3 E92 (Lateral)', 
+                baselineInch: 18, 
+                img: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1600&q=80', 
+                rearPos: { left: 26, top: 58 }, 
+                frontPos: { left: 70, top: 58 },
+                baseSize: 110,
+                perspective: 'rotateY(-5deg)'
+            },
+            { 
+                id: 'f82', 
+                name: 'BMW M4 F82 (Lateral)', 
+                baselineInch: 19, 
+                img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80', 
+                rearPos: { left: 27, top: 57 }, 
+                frontPos: { left: 69, top: 57 },
+                baseSize: 115,
+                perspective: 'rotateY(-3deg)'
+            }
+        ];
+
+        let currentChassis = chassisDB[0];
+        let currentWheel = wheelsDB[0];
+        let currentTint = 'original';
+        let currentScaleMultiplier = 1.0;
+        let cameraActive = false;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderWheelsCatalog();
+            renderChassisCatalog();
+            selectChassis('e46');
+            initDraggableWheels();
+            navigateToPage('llantas');
+        });
+
+        function navigateToPage(pageName) {
+            // Hide all pages
+            const pages = ['llantas', 'extras', 'diy', 'ocasion', 'llaves', 'doc'];
+            pages.forEach(p => {
+                const el = document.getElementById('page-' + p);
+                if (el) el.classList.add('hidden');
+                const btn = document.getElementById('tab-' + p);
+                if (btn) btn.classList.remove('active');
+            });
+
+            // Show target page
+            const targetEl = document.getElementById('page-' + pageName);
+            if (targetEl) targetEl.classList.remove('hidden');
+            const targetBtn = document.getElementById('tab-' + pageName);
+            if (targetBtn) targetBtn.classList.add('active');
+
+            // Action bar visibility
+            const actionBarLlantas = document.getElementById('action-bar-llantas');
+            if (actionBarLlantas) {
+                if (pageName === 'llantas') actionBarLlantas.classList.remove('hidden');
+                else actionBarLlantas.classList.add('hidden');
+            }
+
+            // Update LCD Display title
+            const lcdTitle = document.getElementById('lcd-main-title');
+            const lcdLeft = document.getElementById('lcd-status-left');
+            const lcdRight = document.getElementById('lcd-status-right');
+
+            if (lcdTitle && lcdLeft && lcdRight) {
+                switch(pageName) {
+                    case 'llantas':
+                        lcdTitle.textContent = "BMWEB LLANTAS 3D";
+                        lcdLeft.textContent = "< MODO: FITMENT PRO 3D >";
+                        lcdRight.textContent = `OEM: ${currentChassis.baselineInch}" FITMENT`;
+                        break;
+                    case 'extras':
+                        lcdTitle.textContent = "BMWEB EXTRAS M";
+                        lcdLeft.textContent = "< MODO: PERFORMANCE >";
+                        lcdRight.textContent = "HOMOLOGADO TÜV";
+                        break;
+                    case 'diy':
+                        lcdTitle.textContent = "BMWEB TALLER DIY";
+                        lcdLeft.textContent = "< MODO: BRICOLAJE >";
+                        lcdRight.textContent = "GUÍAS TÉCNICAS";
+                        break;
+                    case 'ocasion':
+                        lcdTitle.textContent = "BMWEB OCASIÓN";
+                        lcdLeft.textContent = "< MODO: VEHÍCULOS >";
+                        lcdRight.textContent = "CERTIFICADOS";
+                        break;
+                    case 'llaves':
+                        lcdTitle.textContent = "BMWEB LLAVES EWS";
+                        lcdLeft.textContent = "< MODO: CODIFICACIÓN >";
+                        lcdRight.textContent = "CAS / EWS SYNC";
+                        break;
+                    case 'doc':
+                        lcdTitle.textContent = "BMWEB MANUALES";
+                        lcdLeft.textContent = "< MODO: DOCUMENTACIÓN >";
+                        lcdRight.textContent = "ESQUEMAS ELÉCTRICOS";
+                        break;
+                }
+            }
+        }
+
+        function switchSidebarTab(tab) {
+            const btnWheels = document.getElementById('btn-side-wheels');
+            const btnChassis = document.getElementById('btn-side-chassis');
+            const viewWheels = document.getElementById('catalog-wheels-view');
+            const viewChassis = document.getElementById('catalog-chassis-view');
+
+            if (tab === 'wheels') {
+                btnWheels.className = 'px-2 py-1 text-[11px] font-bold rounded bg-brandActiveRed text-white transition';
+                btnChassis.className = 'px-2 py-1 text-[11px] font-bold rounded bg-zinc-900 text-[#f67e18] hover:bg-zinc-800 transition';
+                viewWheels.classList.remove('hidden');
+                viewChassis.classList.add('hidden');
+            } else {
+                btnChassis.className = 'px-2 py-1 text-[11px] font-bold rounded bg-brandActiveRed text-white transition';
+                btnWheels.className = 'px-2 py-1 text-[11px] font-bold rounded bg-zinc-900 text-[#f67e18] hover:bg-zinc-800 transition';
+                viewChassis.classList.remove('hidden');
+                viewWheels.classList.add('hidden');
+            }
+        }
+
+        function renderWheelsCatalog() {
+            const grid = document.getElementById('wheels-grid');
+            if (!grid) return;
+            grid.innerHTML = wheelsDB.map(w => {
+                const isSelected = currentWheel.id === w.id;
+                let previewHTML = '';
+
+                if (w.isCustomImg) {
+                    previewHTML = `<img src="${w.imgSrc}" class="w-12 h-12 object-contain mx-auto">`;
+                } else {
+                    previewHTML = createWheelSVG(w.type, currentTint);
+                }
+
+                return `
+                    <div onclick="selectWheel(${w.id})" class="p-2 rounded-lg bg-zinc-900 border ${isSelected ? 'border-brandActiveRed bg-zinc-800' : 'border-zinc-800 hover:border-zinc-700'} cursor-pointer transition flex flex-col items-center text-center space-y-1">
+                        <div class="w-12 h-12 flex items-center justify-center">${previewHTML}</div>
+                        <span class="text-[10px] font-bold text-zinc-200 truncate w-full">${w.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChassisCatalog() {
+            const grid = document.getElementById('chassis-grid');
+            if (!grid) return;
+            grid.innerHTML = chassisDB.map(c => `
+                <div onclick="selectChassis('${c.id}')" class="p-2 rounded-lg bg-zinc-900 border ${currentChassis.id === c.id ? 'border-brandActiveRed bg-zinc-800' : 'border-zinc-800 hover:border-zinc-700'} cursor-pointer transition flex items-center space-x-3">
+                    <img src="${c.img}" alt="${c.name}" class="w-16 h-10 object-cover rounded">
+                    <div class="flex flex-col truncate">
+                        <span class="text-xs font-bold text-zinc-200 truncate">${c.name}</span>
+                        <span class="text-[10px] text-brandOrange">OEM: ${c.baselineInch}"</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectWheel(id) {
+            currentWheel = wheelsDB.find(w => w.id === id);
+            renderWheelsCatalog();
+            updateWheelRender();
+        }
+
+        function selectChassis(id) {
+            currentChassis = chassisDB.find(c => c.id === id);
+            renderChassisCatalog();
+            
+            const chassisImg = document.getElementById('active-chassis-img');
+            if (chassisImg) chassisImg.src = currentChassis.img;
+
+            resetConfiguration();
+
+            const badge = document.getElementById('chassis-info-badge');
+            if (badge) badge.textContent = `Chasis: ${currentChassis.name} (${currentChassis.baselineInch}")`;
+
+            const lcdRight = document.getElementById('lcd-status-right');
+            if (lcdRight && !document.getElementById('page-llantas').classList.contains('hidden')) {
+                lcdRight.textContent = `OEM: ${currentChassis.baselineInch}" FITMENT`;
+            }
+        }
+
+        function updateWheelRender() {
+            const rearWrapper = document.getElementById('rear-wheel-wrapper');
+            const frontWrapper = document.getElementById('front-wheel-wrapper');
+
+            let wheelContent = '';
+            if (currentWheel.isCustomImg) {
+                let filterStyle = '';
+                if (currentTint === 'black') filterStyle = 'brightness(0.3) contrast(1.2)';
+                else if (currentTint === 'gold') filterStyle = 'sepia(1) hue-rotate(15deg) saturate(2.5)';
+                else if (currentTint === 'bronze') filterStyle = 'sepia(0.8) hue-rotate(-10deg) saturate(2)';
+
+                wheelContent = `<img src="${currentWheel.imgSrc}" class="custom-wheel-img drop-shadow-xl" style="filter: ${filterStyle};">`;
+            } else {
+                wheelContent = createWheelSVG(currentWheel.type, currentTint);
+            }
+
+            if (rearWrapper) rearWrapper.innerHTML = wheelContent;
+            if (frontWrapper) frontWrapper.innerHTML = wheelContent;
+
+            applyWheelDimensions();
+
+            const calculatedInch = Math.round(currentChassis.baselineInch * currentScaleMultiplier);
+            const summary = document.getElementById('selected-summary');
+            if (summary) {
+                summary.innerHTML = `Modelo: <span class="text-brandOrange font-bold">${currentWheel.name} (${calculatedInch}")</span>`;
+            }
+        }
+
+        function applyWheelDimensions() {
+            const finalSize = Math.round(currentChassis.baseSize * currentScaleMultiplier);
+            const rear = document.getElementById('wheel-rear');
+            const front = document.getElementById('wheel-front');
+
+            if (rear) {
+                rear.style.width = finalSize + 'px';
+                rear.style.height = finalSize + 'px';
+                rear.style.transform = `perspective(800px) ${currentChassis.perspective}`;
+            }
+            if (front) {
+                front.style.width = finalSize + 'px';
+                front.style.height = finalSize + 'px';
+                front.style.transform = `perspective(800px) ${currentChassis.perspective}`;
+            }
+        }
+
+        function adjustWheelScale(val) {
+            currentScaleMultiplier = parseFloat(val);
+            const label = document.getElementById('scale-value-label');
+            if (label) label.textContent = Math.round(currentScaleMultiplier * 100) + '%';
+            updateWheelRender();
+        }
+
+        function setWheelFilter(tint) {
+            currentTint = tint;
+            renderWheelsCatalog();
+            updateWheelRender();
+        }
+
+        function resetConfiguration() {
+            const rear = document.getElementById('wheel-rear');
+            const front = document.getElementById('wheel-front');
+            
+            if (rear) {
+                rear.style.left = currentChassis.rearPos.left + '%';
+                rear.style.top = currentChassis.rearPos.top + '%';
+            }
+            if (front) {
+                front.style.left = currentChassis.frontPos.left + '%';
+                front.style.top = currentChassis.frontPos.top + '%';
+            }
+
+            currentScaleMultiplier = 1.0;
+            const slider = document.getElementById('wheel-scale-slider');
+            if (slider) slider.value = "1.0";
+            const label = document.getElementById('scale-value-label');
+            if (label) label.textContent = '100%';
+
+            updateWheelRender();
+        }
+
+        // Carga de Llanta PNG Personalizada
+        function loadCustomWheelImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newId = Date.now();
+                const customWheel = {
+                    id: newId,
+                    name: file.name.replace(/\.[^/.]+$/, "").substring(0, 14),
+                    type: 'custom',
+                    isCustomImg: true,
+                    imgSrc: e.target.result,
+                    desc: 'Llanta PNG Subida'
+                };
+
+                wheelsDB.unshift(customWheel);
+                selectWheel(newId);
+                showCustomModal('✅ Llanta PNG subida y montada en ambos ejes correctamente.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadCustomChassis(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const chassisImg = document.getElementById('active-chassis-img');
+                if (chassisImg) chassisImg.src = e.target.result;
+                const badge = document.getElementById('chassis-info-badge');
+                if (badge) badge.textContent = `Chasis Personalizado Subido`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function toggleCamera() {
+            const video = document.getElementById('camera-stream');
+            const btnText = document.getElementById('btn-cam-text');
+            
+            if (!cameraActive) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = stream;
+                    video.classList.remove('hidden');
+                    cameraActive = true;
+                    btnText.textContent = 'Desactivar Cámara';
+                } catch (err) {
+                    showCustomModal('No se pudo acceder a la cámara del dispositivo.');
+                }
+            } else {
+                const stream = video.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                video.classList.add('hidden');
+                cameraActive = false;
+                btnText.textContent = 'Activar Cámara AR';
+            }
+        }
+
+        // Sintetizador de Sonido de Motor BMW 6 Cilindros en Línea (L6 M54 / N52)
+        function playEngineSound6Cyl() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+
+                const now = ctx.currentTime;
+
+                // Dual Oscillators for rich inline-6 harmonics
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const subOsc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.type = 'sawtooth';
+                osc2.type = 'triangle';
+                subOsc.type = 'sine';
+
+                // Firing order harmonics (L6 profile)
+                osc1.frequency.setValueAtTime(55, now); // Idle 650 RPM equivalent pitch
+                osc2.frequency.setValueAtTime(110, now);
+                subOsc.frequency.setValueAtTime(27.5, now);
+
+                // Rev Ramp
+                osc1.frequency.exponentialRampToValueAtTime(260, now + 0.6); // Rev to ~3200 RPM
+                osc2.frequency.exponentialRampToValueAtTime(520, now + 0.6);
+                subOsc.frequency.exponentialRampToValueAtTime(130, now + 0.6);
+
+                osc1.frequency.exponentialRampToValueAtTime(80, now + 1.2); // Decel back down
+                osc2.frequency.exponentialRampToValueAtTime(160, now + 1.2);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.5, now + 0.5);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                subOsc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                subOsc.start(now);
+
+                osc1.stop(now + 1.3);
+                osc2.stop(now + 1.3);
+                subOsc.stop(now + 1.3);
+            } catch(e) {}
+        }
+
+        function takeSnapshot() {
+            const stage = document.getElementById('workspace-canvas');
+            if (typeof html2canvas !== 'undefined') {
+                html2canvas(stage, { backgroundColor: '#000000', useCORS: true }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `bmw-fitment-${Date.now()}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    showCustomModal('📸 Captura de alta resolución descargada con éxito.');
+                }).catch(() => {
+                    showCustomModal('📸 Configuración guardada en memoria.');
+                });
+            } else {
+                showCustomModal('📸 Captura guardada.');
+            }
+        }
+
+        function saveConfiguration() {
+            const calculatedInch = Math.round(currentChassis.baselineInch * currentScaleMultiplier);
+            const configData = {
+                chassis: currentChassis.name,
+                wheel: currentWheel.name,
+                inches: calculatedInch,
+                timestamp: new Date().toLocaleString()
+            };
+            localStorage.setItem('bmw_ar_config', JSON.stringify(configData));
+            showCustomModal(`💾 Configuración (${currentWheel.name} ${calculatedInch}") guardada correctamente.`);
+        }
+
+        function showCustomModal(message) {
+            const existing = document.getElementById('custom-modal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'custom-modal';
+            modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4';
+            modal.innerHTML = `
+                <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+                    <div class="w-12 h-12 rounded-full bg-brandOrange/20 text-brandOrange flex items-center justify-center mx-auto text-xl">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <p class="text-sm text-zinc-200 font-medium">${message}</p>
+                    <button onclick="document.getElementById('custom-modal').remove()" class="w-full py-2 bg-brandOrange text-black font-bold rounded-lg text-xs hover:opacity-95 transition">Aceptar</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function initDraggableWheels() {
+            const wheels = document.querySelectorAll('.wheel-container');
+            wheels.forEach(wheel => {
+                let isDragging = false, startX, startY, initialLeft, initialTop;
+
+                wheel.addEventListener('pointerdown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    
+                    const rect = wheel.getBoundingClientRect();
+                    const parentRect = wheel.parentElement.getBoundingClientRect();
+                    
+                    initialLeft = rect.left - parentRect.left;
+                    initialTop = rect.top - parentRect.top;
+                    
+                    wheel.setPointerCapture(e.pointerId);
+                    e.preventDefault();
+                });
+
+                wheel.addEventListener('pointermove', (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    
+                    wheel.style.left = (initialLeft + dx) + 'px';
+                    wheel.style.top = (initialTop + dy) + 'px';
+                });
+
+                wheel.addEventListener('pointerup', (e) => {
+                    isDragging = false;
+                    wheel.releasePointerCapture(e.pointerId);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
